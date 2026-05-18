@@ -375,6 +375,7 @@
                 <footer class="footer">
                     <p>© 2026 RJF Scholarship Examination. All rights reserved.</p>
                     <p>Powered by FT Innovation</p>
+                    <p>Contact us for any need. <a href="https://roktojobafoundation.github.io/qr/">Roktojoba Foundation</a></p>
                     <p>Design & Developed by <a href="https://www.facebook.com/md.tasrik.hossain">Tasrik Hossain</a> & <a href="https://www.facebook.com/siyam696">Siyam</a></p>
                 </footer>
             `;
@@ -514,7 +515,13 @@
                         <button type="submit" class="btn btn-primary w-full mt-2" id="regSubmitBtn">📋 Register Now</button>
                     </form>
                     <div id="regResult" style="margin-top:16px;"></div>
-                </div>`;
+                </div>
+                <footer class="footer">
+                    <p>© 2026 RJF Scholarship Examination. All rights reserved.</p>
+                    <p>Powered by FT Innovation</p>
+                    <p>Contact us for any need. <a href="https://roktojobafoundation.github.io/qr/">Roktojoba Foundation</a></p>
+                    <p>Design & Developed by <a href="https://www.facebook.com/md.tasrik.hossain">Tasrik Hossain</a> & <a href="https://www.facebook.com/siyam696">Siyam</a></p>
+                </footer>`;
 
             // Attach name filters (excluding roll)
             ['regName', 'regFather', 'regMother'].forEach(id => {
@@ -694,7 +701,12 @@
                     </div>
                     <div id="saResult" style="margin-top:16px;"></div>
                 </div>
-                <footer class="footer"><p>© 2026 RJF Scholarship Examination. All rights reserved.</p></footer>`;
+                <footer class="footer">
+                    <p>© 2026 RJF Scholarship Examination. All rights reserved.</p>
+                    <p>Powered by FT Innovation</p>
+                    <p>Contact us for any need. <a href="https://roktojobafoundation.github.io/qr/">Roktojoba Foundation</a></p>
+                    <p>Design & Developed by <a href="https://www.facebook.com/md.tasrik.hossain">Tasrik Hossain</a> & <a href="https://www.facebook.com/siyam696">Siyam</a></p>
+                </footer>`;
             const searchInput = document.getElementById('saSearchInput');
             if (searchInput) attachEnglishOnlyFilter(searchInput);
             if (AppState._qrScanner) { try { AppState._qrScanner.stop(); } catch(e){} AppState._qrScanner = null; }
