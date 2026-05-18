@@ -22,7 +22,8 @@
         :root {
             --primary: #1a237e;
             --primary-light: #283593;
-            --accent: #2e7d32;
+            --accent: #efba0a;
+            --accent-2: #ffffff;
             --accent-light: #ff9100;
             --success: #2e7d32;
             --warning: #f9a825;
@@ -75,7 +76,7 @@
         @keyframes slideDown { from { transform: translateY(-40px); opacity:0; } to { transform: translateY(0); opacity:1; } }
         .header-logo { display:flex; align-items:center; gap:14px; z-index:1; }
         .header-logo .logo-icon {
-            width:52px; height:52px; background:var(--accent); border-radius:14px;
+            width:60px; height:60px; background:var(--accent-2); border-radius:14px;
             display:flex; align-items:center; justify-content:center;
             font-size:26px; font-weight:900; box-shadow:0 6px 20px rgba(255,109,0,0.4);
             animation:pulse 2s infinite; overflow:hidden;
@@ -343,13 +344,13 @@
 
         function renderLandingPage() {
             root.innerHTML = `
-                <div class="app-header">
+                <div class="app-header no-print">
                     <div class="header-logo">
                         <div class="logo-icon">
-                            <img src="roktojoba-logo.webp" alt="Roktojoba Foundation Logo">
+                            <img src="RJFSE26-LOGO.webp" alt="Roktojoba Foundation Logo">
                         </div>
                         <div>
-                            <div class="header-title">RJF Scholarship Examination 2026</div>
+                            <div class="header-title">RJFSE 2026</div>
                             <div class="header-subtitle">EMPOWERING FUTURE LEADERS</div>
                         </div>
                     </div>
@@ -477,7 +478,7 @@
                 <div class="app-header no-print">
                     <div class="header-logo">
                         <div class="logo-icon">
-                            <img src="roktojoba-logo.webp" alt="Roktojoba Foundation Logo">
+                            <img src="RJFSE26-LOGO.webp" alt="Roktojoba Foundation Logo">
                         </div>
                         <div>
                             <div class="header-title">Student Registration</div>
@@ -667,7 +668,7 @@
                 <div class="app-header no-print">
                     <div class="header-logo">
                         <div class="logo-icon">
-                            <img src="roktojoba-logo.webp" alt="Roktojoba Foundation Logo">
+                            <img src="RJFSE26-LOGO.webp" alt="Roktojoba Foundation Logo">
                         </div>
                         <div>
                             <div class="header-title">Student Assistant Portal</div>
@@ -764,9 +765,9 @@
                 <table style="width:100%;margin-top:12px;">
                   <tr><td style="font-weight:700;color:var(--text-light);">Registration ID</td><td><strong>${regID}</strong></td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Name</td><td>${escapeHTML(student.name)}</td></tr>
-                  <tr><td style="font-weight:700;color:var(--text-light);">Father's Name</td><td>${escapeHTML(student.fatherName)}</td></tr>
-                  <tr><td style="font-weight:700;color:var(--text-light);">Mother's Name</td><td>${escapeHTML(student.motherName)}</td></tr>
-                  <tr><td style="font-weight:700;color:var(--text-light);">Date of Birth</td><td>${student.dateOfBirth || 'N/A'}</td></tr>
+                  <tr><td style="font-weight:700;color:var(--text-light);">Father</td><td>${escapeHTML(student.fatherName)}</td></tr>
+                  <tr><td style="font-weight:700;color:var(--text-light);">Mother</td><td>${escapeHTML(student.motherName)}</td></tr>
+                  <tr><td style="font-weight:700;color:var(--text-light);">DOB</td><td>${student.dateOfBirth || 'N/A'}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Class</td><td>${student.class}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Group</td><td>${student.group}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Class Roll</td><td>${student.classRoll}</td></tr>
