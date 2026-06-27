@@ -1001,7 +1001,9 @@
                 sitNumber: '',
                 status: 'Registered',
                 pictureURL: '',
-                pictureDataURL: AppState.pendingCroppedDataURL
+                pictureDataURL: AppState.pendingCroppedDataURL,
+                // 🔥 ADDED: Save registration timestamp
+                registrationTimestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             try {
@@ -1010,10 +1012,26 @@
                 const uploadedUrl = await uploadToTelegram(AppState.pendingCroppedBlob);
                 studentData.pictureURL = uploadedUrl;
                 await db.collection('students').doc(regID).set(studentData);
-                await rtdb.ref('students/' + regID).set({ ...studentData, createdAt: Date.now() });
+                
+                // RTDB entry with numeric timestamp for compatibility
+                const rtdbData = {
+                    ...studentData,
+                    registrationTimestamp: Date.now(),
+                    createdAt: Date.now()
+                };
+                // Remove serverTimestamp sentinel before sending to RTDB
+                delete rtdbData.registrationTimestamp; // will replace with numeric below
+                rtdbData.registrationTimestamp = Date.now();
+                await rtdb.ref('students/' + regID).set(rtdbData);
 
                 const qrCodeURL =
                     `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(regID)}&bgcolor=ffffff&color=1a237e`;
+
+                // Show registration time on the card (using client time as a placeholder)
+                const registrationTime = new Date().toLocaleString('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
 
                 const successCardHTML = `
                     <div id="successCardToDownload" class="success-card" style="max-width:450px;margin:0 auto;">
@@ -1031,11 +1049,12 @@
                         <div class="info-row"><span class="label">Class</span><span class="value">${studentData.class}</span></div>
                         <div class="info-row"><span class="label">Group</span><span class="value">${studentData.group}</span></div>
                         <div class="info-row"><span class="label">Mobile</span><span class="value">${studentData.mobile}</span></div>
+                        <div class="info-row"><span class="label">🕒 Registration Time</span><span class="value">${registrationTime}</span></div>
                         <div style="text-align:center; margin-top:12px;">
                             <img src="${qrCodeURL}" alt="QR Code" style="width:50px;height:50px;" crossorigin="anonymous">
                             <div style="font-size:0.65rem; color:#1a237e; font-weight:700; letter-spacing:1px;">📱 Scan QR Code</div>
                         </div>
-                        <div class="watermark">RJFSE 2026</div>
+                        <div class="watermark">Design & Developed by Tasrik Hossain & Siyam ||  RJFSE 2026</div>
                     </div>
                     <div style="text-align:center;margin-top:20px;">
                         <button class="btn btn-gallery" onclick="downloadSuccessCardPNG('${regID}')">💾 Save as PNG</button>
@@ -1161,13 +1180,31 @@
                     'badge-warning';
                 const statusText = student.present ? 'Present' : student.checkedIn ? 'Checked In' : 'Registered';
 
-                // 🔧 FIXED: Reliable picture display logic
+                // Format registration timestamp if available
+                let regTimeDisplay = 'N/A';
+                if (student.registrationTimestamp) {
+                    if (student.registrationTimestamp.seconds) {
+                        // Firestore Timestamp object
+                        regTimeDisplay = new Date(student.registrationTimestamp.seconds * 1000).toLocaleString('en-US', {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        });
+                    } else if (typeof student.registrationTimestamp === 'number') {
+                        // numeric timestamp from RTDB
+                        regTimeDisplay = new Date(student.registrationTimestamp).toLocaleString('en-US', {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        });
+                    } else if (typeof student.registrationTimestamp === 'string') {
+                        regTimeDisplay = student.registrationTimestamp;
+                    }
+                }
+
                 const pictureDataURL = student.pictureDataURL || null;
                 const pictureURL = student.pictureURL || null;
                 let pictureHTML = '';
 
                 if (pictureDataURL) {
-                    // Base64 data URL always works
                     pictureHTML = `
                         <div style="text-align:center;margin-top:12px;">
                             <img src="${pictureDataURL}" 
@@ -1175,7 +1212,6 @@
                                  style="width:80px;height:80px;object-fit:cover;border-radius:50%;border:3px solid var(--primary);">
                         </div>`;
                 } else if (pictureURL) {
-                    // Fallback: Try direct URL first, then CORS proxy
                     const escapedURL = pictureURL.replace(/'/g, "\\'");
                     pictureHTML = `
                         <div style="text-align:center;margin-top:12px;">
@@ -1215,6 +1251,7 @@
                   <tr><td style="font-weight:700;color:var(--text-light);">Class Roll</td><td>${student.classRoll}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Gender</td><td>${student.gender}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Mobile</td><td>${student.mobile}</td></tr>
+                  <tr><td style="font-weight:700;color:var(--text-light);">Registration Time</td><td>${regTimeDisplay}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Status</td><td><span class="badge ${statusColor}">${statusText}</span></td></tr>
                   <tr style="background:#fff9c4;"><td style="font-weight:700;color:var(--primary);">🏦 Exam Room</td><td><strong style="font-size:1.3rem;color:var(--accent);">${student.examRoomNumber || 'Not Assigned Yet'}</strong></td></tr>
                   <tr style="background:#fff9c4;"><td style="font-weight:700;color:var(--primary);">💺 Sit Number</td><td><strong style="font-size:1.3rem;color:var(--accent);">${student.sitNumber || 'Not Assigned Yet'}</strong></td></tr>
