@@ -927,10 +927,10 @@
             const val = classSelect.value;
             groupSelect.innerHTML = '<option value="">Select Group</option>';
             if (val === '8') {
-                groupSelect.innerHTML = '<option value="Junior" selected>Junior</option>';
+                groupSelect.innerHTML = '<option value="Combind" selected>Combind</option>';
                 groupSelect.disabled = true;
             } else if (val === '9' || val === '10') {
-                ['Science', 'Arts', 'Commerce', 'Vocational'].forEach(g => groupSelect.innerHTML +=
+                ['Science', 'Business Studies', 'Humanities', 'Vocational'].forEach(g => groupSelect.innerHTML +=
                     `<option value="${g}">${g}</option>`);
                 groupSelect.disabled = false;
             } else { groupSelect.disabled = false; }
