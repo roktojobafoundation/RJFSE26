@@ -696,6 +696,34 @@
             return div.innerHTML;
         }
 
+        /**
+         * Converts a date string from YYYY-MM-DD to DD Mon YYYY format.
+         * Example: "2012-11-08" → "08 Nov 2012"
+         */
+        function formatDateToDDMonYYYY(dateString) {
+            if (!dateString) return '';
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const parts = dateString.split('-');
+            if (parts.length !== 3) return dateString;
+            const year = parts[0];
+            const monthIndex = parseInt(parts[1], 10) - 1;
+            const day = parts[2];
+            if (monthIndex < 0 || monthIndex > 11) return dateString;
+            return `${day} ${months[monthIndex]} ${year}`;
+        }
+
+        /**
+         * Validates that the date falls within the allowed birth year range (2008–2014).
+         * Expects dateString in YYYY-MM-DD format.
+         */
+        function isDOBInRange(dateString) {
+            if (!dateString) return false;
+            const parts = dateString.split('-');
+            if (parts.length !== 3) return false;
+            const year = parseInt(parts[0], 10);
+            return year >= 2008 && year <= 2014;
+        }
+
         function createParticles() {
             const container = document.getElementById('bgParticles');
             for (let i = 0; i < 35; i++) {
@@ -880,7 +908,10 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group"><label>Mother's Name *</label><input type="text" id="regMother" required autocomplete="off"></div>
-                            <div class="form-group"><label>Date of Birth *</label><input type="date" id="regDob" required></div>
+                            <div class="form-group">
+                                <label>Date of Birth * <span style="font-weight:400;color:#ff6d00;font-size:0.75rem;">(Year: 2008–2014)</span></label>
+                                <input type="date" id="regDob" required min="2008-01-01" max="2014-12-31" onchange="validateDOBField()">
+                            </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group"><label>Class Roll *</label><input type="text" id="regRoll" required autocomplete="off" pattern="[0-9]*" inputmode="numeric"></div>
@@ -918,6 +949,21 @@
                 mobileEl.addEventListener('input', function(e) { this.value = this.value.replace(/\D/g, ''); });
             }
             handleClassChange();
+        }
+
+        /**
+         * Validates the DOB field on change and shows a toast if out of range.
+         */
+        function validateDOBField() {
+            const dobInput = document.getElementById('regDob');
+            if (!dobInput) return;
+            const dobValue = dobInput.value;
+            if (!dobValue) return;
+            if (!isDOBInRange(dobValue)) {
+                showToast('⚠️ Birth year must be between 2008 and 2014. Please select a valid date.', 'error', 'top');
+                dobInput.value = '';
+                dobInput.focus();
+            }
         }
 
         function handleClassChange() {
@@ -977,6 +1023,18 @@
             submitBtn.disabled = true;
             submitBtn.textContent = '⏳ Registering...';
             const regID = generateRegID();
+
+            // --- Validate DOB range before proceeding ---
+            const rawDOB = document.getElementById('regDob').value;
+            if (!rawDOB || !isDOBInRange(rawDOB)) {
+                showToast('⚠️ Birth year must be between 2008 and 2014. Please correct the date.', 'error', 'top');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '📋 Register Now';
+                return;
+            }
+            // Format DOB to DD Mon YYYY (e.g., "08 Nov 2012")
+            const formattedDOB = formatDateToDDMonYYYY(rawDOB);
+
             if (!AppState.pendingCroppedBlob || !AppState.pendingCroppedDataURL) {
                 showToast('Please upload and crop a picture.', 'error');
                 submitBtn.disabled = false;
@@ -991,7 +1049,7 @@
                 name: sanitizeName(document.getElementById('regName').value),
                 fatherName: sanitizeName(document.getElementById('regFather').value),
                 motherName: sanitizeName(document.getElementById('regMother').value),
-                dateOfBirth: document.getElementById('regDob').value,
+                dateOfBirth: formattedDOB,
                 classRoll: sanitizeNumberOnly(document.getElementById('regRoll').value),
                 class: document.getElementById('regClass').value,
                 group: document.getElementById('regGroup').value,
@@ -1002,7 +1060,6 @@
                 status: 'Registered',
                 pictureURL: '',
                 pictureDataURL: AppState.pendingCroppedDataURL,
-                // 🔥 ADDED: Save registration timestamp
                 registrationTimestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
 
@@ -1012,25 +1069,27 @@
                 const uploadedUrl = await uploadToTelegram(AppState.pendingCroppedBlob);
                 studentData.pictureURL = uploadedUrl;
                 await db.collection('students').doc(regID).set(studentData);
-                
+
                 // RTDB entry with numeric timestamp for compatibility
                 const rtdbData = {
                     ...studentData,
                     registrationTimestamp: Date.now(),
                     createdAt: Date.now()
                 };
-                // Remove serverTimestamp sentinel before sending to RTDB
-                delete rtdbData.registrationTimestamp; // will replace with numeric below
+                delete rtdbData.registrationTimestamp;
                 rtdbData.registrationTimestamp = Date.now();
                 await rtdb.ref('students/' + regID).set(rtdbData);
 
                 const qrCodeURL =
                     `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(regID)}&bgcolor=ffffff&color=1a237e`;
 
-                // Show registration time on the card (using client time as a placeholder)
                 const registrationTime = new Date().toLocaleString('en-US', {
-                    year: 'numeric', month: 'short', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
                 });
 
                 const successCardHTML = `
@@ -1043,7 +1102,7 @@
                             <img src="${AppState.pendingCroppedDataURL}" alt="Student Photo" style="width:90px;height:90px;object-fit:cover;border:2px solid var(--primary);" crossorigin="anonymous">
                         </div>
                         <div class="info-row"><span class="label">Full Name</span><span class="value">${escapeHTML(studentData.name)}</span></div>
-                        <div class="info-row"><span class="label">Date of Birth</span><span class="value">${studentData.dateOfBirth}</span></div>
+                        <div class="info-row"><span class="label">Date of Birth</span><span class="value">${escapeHTML(studentData.dateOfBirth)}</span></div>
                         <div class="info-row"><span class="label">Gender</span><span class="value">${studentData.gender}</span></div>
                         <div class="info-row"><span class="label">Class Roll</span><span class="value">${studentData.classRoll}</span></div>
                         <div class="info-row"><span class="label">Class</span><span class="value">${studentData.class}</span></div>
@@ -1180,20 +1239,26 @@
                     'badge-warning';
                 const statusText = student.present ? 'Present' : student.checkedIn ? 'Checked In' : 'Registered';
 
-                // Format registration timestamp if available
                 let regTimeDisplay = 'N/A';
                 if (student.registrationTimestamp) {
                     if (student.registrationTimestamp.seconds) {
-                        // Firestore Timestamp object
-                        regTimeDisplay = new Date(student.registrationTimestamp.seconds * 1000).toLocaleString('en-US', {
-                            year: 'numeric', month: 'short', day: 'numeric',
-                            hour: '2-digit', minute: '2-digit', second: '2-digit'
-                        });
+                        regTimeDisplay = new Date(student.registrationTimestamp.seconds * 1000).toLocaleString(
+                            'en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                            });
                     } else if (typeof student.registrationTimestamp === 'number') {
-                        // numeric timestamp from RTDB
                         regTimeDisplay = new Date(student.registrationTimestamp).toLocaleString('en-US', {
-                            year: 'numeric', month: 'short', day: 'numeric',
-                            hour: '2-digit', minute: '2-digit', second: '2-digit'
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
                         });
                     } else if (typeof student.registrationTimestamp === 'string') {
                         regTimeDisplay = student.registrationTimestamp;
@@ -1245,7 +1310,7 @@
                   <tr><td style="font-weight:700;color:var(--text-light);">Name</td><td>${escapeHTML(student.name)}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Father</td><td>${escapeHTML(student.fatherName)}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Mother</td><td>${escapeHTML(student.motherName)}</td></tr>
-                  <tr><td style="font-weight:700;color:var(--text-light);">DOB</td><td>${student.dateOfBirth || 'N/A'}</td></tr>
+                  <tr><td style="font-weight:700;color:var(--text-light);">DOB</td><td>${escapeHTML(student.dateOfBirth || 'N/A')}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Class</td><td>${student.class}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Group</td><td>${student.group}</td></tr>
                   <tr><td style="font-weight:700;color:var(--text-light);">Class Roll</td><td>${student.classRoll}</td></tr>
@@ -1276,6 +1341,9 @@
         window.switchSATab = switchSATab;
         window.searchStudentAssistant = searchStudentAssistant;
         window.stopSAQRScanner = stopSAQRScanner;
+        window.validateDOBField = validateDOBField;
+        window.isDOBInRange = isDOBInRange;
+        window.formatDateToDDMonYYYY = formatDateToDDMonYYYY;
 
         document.addEventListener('DOMContentLoaded', () => renderLandingPage());
     </script>
