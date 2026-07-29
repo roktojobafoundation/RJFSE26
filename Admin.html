@@ -992,6 +992,7 @@
 
         //#endregion
 
+
         // ===================================================================
         //  GLOBAL STATE (unchanged)
         // ===================================================================
@@ -2622,9 +2623,26 @@
             const students = AppState.allStudents || [];
             let filtered = [];
             let title = '';
+
+            // Helper to extract registration timestamp (works for Firestore Timestamp, Date, number, string)
+            function getRegistrationTimestamp(s) {
+                const ts = s.registrationTimestamp || s.createdAt;
+                if (!ts) return 0;
+                if (ts.seconds) return ts.seconds * 1000;            // Firestore Timestamp
+                if (typeof ts === 'number') return ts;
+                if (ts.toDate) return ts.toDate().getTime();          // Firestore Timestamp (old)
+                if (ts instanceof Date) return ts.getTime();
+                return new Date(ts).getTime();
+            }
+
+            // Sort filtered array by registration time (oldest first)
+            function sortByRegistrationTime(arr) {
+                return arr.sort((a, b) => getRegistrationTimestamp(a) - getRegistrationTimestamp(b));
+            }
+
             switch (type) {
                 case 'all':
-                    filtered = students;
+                    filtered = students.slice(); // copy
                     title = 'All Registered Students';
                     break;
                 case 'present':
@@ -2651,7 +2669,14 @@
                     filtered = students.filter(s => s.class === '10');
                     title = 'Class 10 Students';
                     break;
+                default:
+                    filtered = students.slice();
+                    title = 'Students Report';
             }
+
+            // ✅ Apply registration serial sorting (oldest first)
+            filtered = sortByRegistrationTime(filtered);
+
             doc.setFontSize(16);
             doc.setTextColor(26, 35, 126);
             doc.text('Roktojoba Foundation Scholarship Examination 2026', 14, 20);
@@ -2659,10 +2684,19 @@
             doc.setTextColor(97, 97, 97);
             doc.text(`Report: ${title} (${filtered.length} students)`, 14, 30);
             doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 38);
+
             const tableData = filtered.map((s, i) => [
-                i + 1, s.registrationID || s.id, s.name, s.class, s.classRoll, s.examRoomNumber || '-', s
-                    .sitNumber || '-', s.group, s.status || 'Registered'
+                i + 1,
+                s.registrationID || s.id,
+                s.name,
+                s.class,
+                s.classRoll,
+                s.examRoomNumber || '-',
+                s.sitNumber || '-',
+                s.group,
+                s.status || 'Registered'
             ]);
+
             doc.autoTable({
                 startY: 44,
                 head: [
@@ -2672,6 +2706,7 @@
                 styles: { fontSize: 7, cellPadding: 2 },
                 headStyles: { fillColor: [26, 35, 126], textColor: 255 },
             });
+
             doc.save(`RJFSE26_${type}_report.pdf`);
             showToast('PDF report downloaded!', 'success');
         }
@@ -2936,7 +2971,7 @@
         }
 
         // ===================================================================
-        //  🪑 SEAT TOKEN PDF GENERATOR — FIXED VERSION
+        //  🪑 SEAT TOKEN PDF GENERATOR — Registration Serial Sorting (Oldest First)
         //  Size: 9cm × 6cm  |  8 tokens per A4 page (2 cols × 4 rows)
         //  Clean, non‑overlapping text with proper spacing & sorting.
         // ===================================================================
@@ -2956,20 +2991,17 @@
                     return;
                 }
 
-                // --- Sort Students by Class & Registration Time (Serial) ---
-                students.sort((a, b) => {
-                    const classA = parseInt(a.class) || a.class || "";
-                    const classB = parseInt(b.class) || b.class || "";
-
-                    if (classA !== classB) {
-                        return classA > classB ? 1 : -1;
-                    }
-
-                    // Fallbacks for Registration Time / Serial
-                    const timeA = a.timestamp || a.registrationDate || a.id || "";
-                    const timeB = b.timestamp || b.registrationDate || b.id || "";
-                    return String(timeA).localeCompare(String(timeB));
-                });
+                // --- Sort Students by Registration Time (Oldest first) ---
+                const getTimestamp = (student) => {
+                    const ts = student.registrationTimestamp || student.createdAt;
+                    if (!ts) return 0;
+                    if (ts.seconds !== undefined) return ts.seconds * 1000 + (ts.nanoseconds || 0) / 1e6;
+                    if (typeof ts === 'number') return ts;
+                    if (ts.toDate) return ts.toDate().getTime();
+                    if (ts instanceof Date) return ts.getTime();
+                    return new Date(ts).getTime();
+                };
+                students.sort((a, b) => getTimestamp(a) - getTimestamp(b));
 
                 const { PDFDocument, rgb, StandardFonts } = PDFLib;
                 const pdfDoc = await PDFDocument.create();
